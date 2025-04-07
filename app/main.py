@@ -2,8 +2,11 @@ import uvicorn
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from typing import Optional, Union
 import base64
-from .models import OCRRequest, SlideMatchRequest, DetectionRequest, APIResponse
-from .services import ocr_service
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.models import OCRRequest, SlideMatchRequest, DetectionRequest, APIResponse
+from app.services import ocr_service
 
 app = FastAPI()
 
@@ -57,14 +60,20 @@ async def slide_match_endpoint(
         simple_target: bool = Form(False)
 ):
     try:
-        if (background is None and target is None) or (background_file.size == 0 and target_file.size == 0):
+        # 调试输出
+        print(f"接收到请求: target_file={target_file}, background_file={background_file}")
+        
+        if ((target_file is None or background_file is None) and 
+            (target is None or background is None)):
             return APIResponse(code=400, message="Both target and background must be provided")
 
         target_bytes = await decode_image(target_file or target)
         background_bytes = await decode_image(background_file or background)
         result = ocr_service.slide_match(target_bytes, background_bytes, simple_target)
-        return APIResponse(code=200, message="Success", data=result)
+        return APIResponse(code=0, message="Success", data=result)  # 改为code=0
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return APIResponse(code=500, message=str(e))
 
 
